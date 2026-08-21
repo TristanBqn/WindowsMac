@@ -35,6 +35,24 @@ final class FinderController {
         }
     }
 
+    func activateWindow(index: Int) {
+        Task { [weak self] in
+            let result = await Task.detached(priority: .userInitiated) {
+                FinderAutomation.activateWindow(index: index)
+            }.value
+
+            guard let self else { return }
+            switch result {
+            case .success(let activated):
+                if !activated {
+                    NSSound.beep()
+                }
+            case .failure(let failure):
+                self.handleAutomationFailure(failure)
+            }
+        }
+    }
+
     func showAddressBar() {
         Task { [weak self] in
             let result = await Task.detached(priority: .userInitiated) {
