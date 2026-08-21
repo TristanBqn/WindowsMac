@@ -61,11 +61,7 @@ final class FinderController {
             end try
 
             set b to bounds of front Finder window
-            return currentPath & linefeed & ¬
-                ((item 1 of b) as text) & "," & ¬
-                ((item 2 of b) as text) & "," & ¬
-                ((item 3 of b) as text) & "," & ¬
-                ((item 4 of b) as text)
+            return currentPath & linefeed & ((item 1 of b) as text) & "," & ((item 2 of b) as text) & "," & ((item 3 of b) as text) & "," & ((item 4 of b) as text)
         end tell
         """
 
@@ -85,7 +81,8 @@ final class FinderController {
         let lines = value.split(separator: "\n", maxSplits: 1, omittingEmptySubsequences: false)
         guard let first = lines.first else { return nil }
 
-        let path = String(first)
+        let rawPath = String(first)
+        let path = FinderPath.normalizedDirectoryPath(from: rawPath) ?? rawPath
         var appKitWindowFrame: CGRect?
 
         if lines.count == 2 {
