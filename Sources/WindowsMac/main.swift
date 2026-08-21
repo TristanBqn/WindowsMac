@@ -84,6 +84,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 finderController.openSelectedChildFolder()
             case .finderAddressBar:
                 finderController.showAddressBar()
+            case .finderActivateWindow:
+                guard let index = command.index else { return }
+                finderController.activateWindow(index: index)
             }
         } catch {
             NSLog("WindowsMac received invalid command: \(error)")
