@@ -146,11 +146,15 @@ final class FinderAddressBarController: NSObject, NSTextFieldDelegate, NSWindowD
             return
         }
 
+        // NSTextField.stringValue can lag behind the active field editor while the
+        // user is still typing or has just pasted. The field editor is authoritative.
+        let submittedText = field.currentEditor()?.string ?? field.stringValue
+
         isSubmitting = true
         field.isEnabled = false
         errorLabel?.isHidden = true
 
-        onSubmit(field.stringValue) { [weak self] result in
+        onSubmit(submittedText) { [weak self] result in
             self?.finishSubmission(result)
         }
     }
@@ -207,8 +211,8 @@ private final class AddressBarPanel: NSPanel {
     override var canBecomeMain: Bool { false }
 
     /// Handle Windows-style editing shortcuts inside WindowsMac itself.
-    /// Karabiner may deliver either the original Control chord or an already-remapped
-    /// Command chord, so the panel accepts both and routes directly to the field editor.
+    /// Karabiner may deliver the original Control chord or an already-remapped
+    /// Command/Option chord, so the panel accepts the relevant forms directly.
     override func sendEvent(_ event: NSEvent) {
         if handleWindowsEditingShortcut(event) {
             return
@@ -221,26 +225,69 @@ private final class AddressBarPanel: NSPanel {
         guard event.type == .keyDown else { return false }
 
         let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
-        guard
-            flags.contains(.control) || flags.contains(.command),
-            let editor = addressField?.currentEditor() as? NSTextView,
-            let key = event.charactersIgnoringModifiers?.lowercased()
-        else {
+        guard let editor = addressField?.currentEditor() as? NSTextView else {
             return false
         }
 
-        switch key {
-        case "a":
-            editor.selectAll(nil)
+        if flags.contains(.control) || flags.contains(.command) {
+            if let key = event.charactersIgnoringModifiers?.lowercased() {
+                switch key {
+                case "a":
+                    editor.selectAll(nil)
+                    return true
+                case "c":
+                    editor.copy(nil)
+                    return true
+                case "v":
+                    editor.paste(nil)
+                    return true
+                case "x":
+                    editor.cut(nil)
+                    return true
+                default:
+                    break
+                }
+            }
+        }
+
+        let wordNavigationModifier =
+            flags.contains(.control) || flags.contains(.option)
+        guard wordNavigationModifier else { return false }
+
+        let extendsSelection = flags.contains(.shift)
+
+        // Hardware key codes are layout-independent for these navigation keys.
+        switch event.keyCode {
+        case 51: // delete_or_backspace
+            editor.deleteWordBackward(nil)
             return true
-        case "c":
-            editor.copy(nil)
+        case 123: // left arrow
+            if extendsSelection {
+                editor.moveWordLeftAndModifySelection(nil)
+            } else {
+                editor.moveWordLeft(nil)
+            }
             return true
-        case "v":
-            editor.paste(nil)
+        case 124: // right arrow
+            if extendsSelection {
+                editor.moveWordRightAndModifySelection(nil)
+            } else {
+                editor.moveWordRight(nil)
+            }
             return true
-        case "x":
-            editor.cut(nil)
+        case 126: // up arrow
+            if extendsSelection {
+                editor.moveParagraphBackwardAndModifySelection(nil)
+            } else {
+                editor.moveToBeginningOfParagraph(nil)
+            }
+            return true
+        case 125: // down arrow
+            if extendsSelection {
+                editor.moveParagraphForwardAndModifySelection(nil)
+            } else {
+                editor.moveToEndOfParagraph(nil)
+            }
             return true
         default:
             return false
