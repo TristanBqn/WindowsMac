@@ -20,6 +20,9 @@ Implemented in the bootstrap:
   - `Alt+Left` / `Alt+Right` navigate Finder history.
   - `Alt+Up` goes to the parent folder.
   - `Alt+Down` opens the selected child only when it is a folder.
+  - `Ctrl+L` opens a native editable address bar anchored to the active Finder window.
+  - the address bar shows the current POSIX path, accepts `Ctrl+A/C/V`, navigates with `Enter`, and closes with `Escape`.
+  - address navigation supports POSIX paths, `~`, quoted paths and `file://` URLs, while rejecting missing paths and regular files.
 - Window management:
   - `Win+Left/Right/Up/Down` uses Karabiner `send_user_command` and the native helper.
   - successive `Win+Up` from the top half maximizes without entering native fullscreen.
@@ -34,10 +37,9 @@ Implemented in the bootstrap:
 
 Not yet implemented:
 
-- Finder `Ctrl+L` address-bar panel.
 - IDE-integrated terminal detection (for example VS Code's integrated terminal).
 - Per-device enablement UI.
-- Layout-independent Finder history navigation for every non-ANSI keyboard layout.
+- Fully layout-independent Finder history navigation for every non-ANSI keyboard layout.
 
 See [`docs/BEHAVIOR.md`](docs/BEHAVIOR.md) for the behavioural contract.
 
@@ -57,6 +59,7 @@ Karabiner-Elements 16+
                   WindowsMac
                   - WindowManager
                   - FinderController
+                  - Finder address bar
                   - Menu-bar state
                        |
                        v
@@ -64,6 +67,7 @@ Karabiner-Elements 16+
                 - snap states
                 - geometry
                 - coordinate conversion
+                - path normalization
                 - command model
 ```
 
@@ -95,6 +99,7 @@ If Karabiner is installed, its own `--lint-complex-modifications` validator is u
 - macOS 14+
 - Karabiner-Elements 16+
 - Accessibility permission for WindowsMac window management
+- Automation permission for Finder address/navigation actions
 
 ## License
 
