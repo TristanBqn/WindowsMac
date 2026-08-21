@@ -1,0 +1,119 @@
+{
+  "title": "WindowsMac — French AZERTY",
+  "rules": [
+    {
+      "description": "WindowsMac — French AZERTY Ctrl shortcuts",
+      "manipulators": [
+        {
+          "type": "basic",
+          "from": {
+            "key_code": "q",
+            "modifiers": {
+              "mandatory": ["control"],
+              "optional": ["any"]
+            }
+          },
+          "to": [
+            {
+              "from_event": true,
+              "modifiers": ["left_command"]
+            }
+          ],
+          "conditions": [
+            {
+              "type": "variable_if",
+              "name": "windowsmac_enabled",
+              "value": 1
+            },
+            {
+              "type": "input_source_if",
+              "input_sources": [
+                {
+                  "language": "^fr$"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "basic",
+          "from": {
+            "key_code": "w",
+            "modifiers": {
+              "mandatory": ["control"],
+              "optional": ["any"]
+            }
+          },
+          "to": [
+            {
+              "from_event": true,
+              "modifiers": ["left_command"]
+            }
+          ],
+          "conditions": [
+            {
+              "type": "variable_if",
+              "name": "windowsmac_enabled",
+              "value": 1
+            },
+            {
+              "type": "input_source_if",
+              "input_sources": [
+                {
+                  "language": "^fr$"
+                }
+              ]
+            },
+            {
+              "type": "frontmost_application_unless",
+              "bundle_identifiers": [
+                "^com\\.apple\\.Terminal$",
+                "^com\\.googlecode\\.iterm2$",
+                "^com\\.mitchellh\\.ghostty$"
+              ]
+            }
+          ]
+        },
+        {
+          "type": "basic",
+          "from": {
+            "key_code": "z",
+            "modifiers": {
+              "mandatory": ["control"],
+              "optional": ["any"]
+            }
+          },
+          "to": [
+            {
+              "from_event": true,
+              "modifiers": ["left_command"]
+            }
+          ],
+          "conditions": [
+            {
+              "type": "variable_if",
+              "name": "windowsmac_enabled",
+              "value": 1
+            },
+            {
+              "type": "input_source_if",
+              "input_sources": [
+                {
+                  "language": "^fr$"
+                }
+              ]
+            },
+            {
+              "type": "frontmost_application_unless",
+              "bundle_identifiers": [
+                "^com\\.apple\\.Terminal$",
+                "^com\\.googlecode\\.iterm2$",
+                "^com\\.mitchellh\\.ghostty$"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
