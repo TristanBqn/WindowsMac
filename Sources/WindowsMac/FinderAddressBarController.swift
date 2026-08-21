@@ -15,11 +15,11 @@ final class FinderAddressBarController: NSObject, NSTextFieldDelegate, NSWindowD
     private var isSubmitting = false
 
     private let onSubmit: (String, @escaping (AddressBarSubmissionResult) -> Void) -> Void
-    private let onDismiss: () -> Void
+    private let onDismiss: (Bool) -> Void
 
     init(
         onSubmit: @escaping (String, @escaping (AddressBarSubmissionResult) -> Void) -> Void,
-        onDismiss: @escaping () -> Void
+        onDismiss: @escaping (Bool) -> Void
     ) {
         self.onSubmit = onSubmit
         self.onDismiss = onDismiss
@@ -176,12 +176,7 @@ final class FinderAddressBarController: NSObject, NSTextFieldDelegate, NSWindowD
     }
 
     private func dismiss(reactivateFinder: Bool) {
-        guard panel != nil else {
-            if reactivateFinder {
-                onDismiss()
-            }
-            return
-        }
+        guard panel != nil else { return }
 
         isDismissing = true
         panel?.orderOut(nil)
@@ -192,9 +187,7 @@ final class FinderAddressBarController: NSObject, NSTextFieldDelegate, NSWindowD
         isSubmitting = false
         isDismissing = false
 
-        if reactivateFinder {
-            onDismiss()
-        }
+        onDismiss(reactivateFinder)
     }
 
     private func screen(for frame: CGRect?) -> NSScreen? {
