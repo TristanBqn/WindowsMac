@@ -203,12 +203,19 @@ private final class AddressBarPanel: NSPanel {
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { false }
 
-    /// WindowsMac's own address bar must understand physical Control shortcuts even
-    /// if Karabiner does not rewrite the event because of frontmost-app timing.
-    override func performKeyEquivalent(with event: NSEvent) -> Bool {
-        guard event.type == .keyDown else {
-            return super.performKeyEquivalent(with: event)
+    /// WindowsMac's own address bar understands physical Control shortcuts directly.
+    /// This makes Ctrl+A/C/V/X reliable even during the brief frontmost-app transition
+    /// when the panel opens and Karabiner may still consider Finder to be frontmost.
+    override func sendEvent(_ event: NSEvent) {
+        if handleWindowsControlShortcut(event) {
+            return
         }
+
+        super.sendEvent(event)
+    }
+
+    private func handleWindowsControlShortcut(_ event: NSEvent) -> Bool {
+        guard event.type == .keyDown else { return false }
 
         let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
         guard
@@ -217,7 +224,7 @@ private final class AddressBarPanel: NSPanel {
             let editor = firstResponder as? NSTextView,
             let key = event.charactersIgnoringModifiers?.lowercased()
         else {
-            return super.performKeyEquivalent(with: event)
+            return false
         }
 
         switch key {
@@ -234,7 +241,7 @@ private final class AddressBarPanel: NSPanel {
             editor.cut(nil)
             return true
         default:
-            return super.performKeyEquivalent(with: event)
+            return false
         }
     }
 }
