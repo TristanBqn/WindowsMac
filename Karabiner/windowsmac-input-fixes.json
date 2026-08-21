@@ -1,0 +1,62 @@
+{
+  "title": "WindowsMac — Input fixes",
+  "rules": [
+    {
+      "description": "WindowsMac — reset app switcher state on physical Windows key",
+      "manipulators": [
+        {
+          "type": "basic",
+          "from": {
+            "key_code": "left_command",
+            "modifiers": { "optional": ["any"] }
+          },
+          "to": [
+            { "set_variable": { "name": "windowsmac_app_switcher_active", "value": 0 } },
+            { "key_code": "left_command" }
+          ],
+          "conditions": [
+            { "type": "variable_if", "name": "windowsmac_enabled", "value": 1 }
+          ]
+        },
+        {
+          "type": "basic",
+          "from": {
+            "key_code": "right_command",
+            "modifiers": { "optional": ["any"] }
+          },
+          "to": [
+            { "set_variable": { "name": "windowsmac_app_switcher_active", "value": 0 } },
+            { "key_code": "right_command" }
+          ],
+          "conditions": [
+            { "type": "variable_if", "name": "windowsmac_enabled", "value": 1 }
+          ]
+        }
+      ]
+    },
+    {
+      "description": "WindowsMac — Ctrl-click as Windows Ctrl-click",
+      "manipulators": [
+        {
+          "type": "basic",
+          "from": {
+            "pointing_button": "button1",
+            "modifiers": {
+              "mandatory": ["control"],
+              "optional": ["any"]
+            }
+          },
+          "to": [
+            {
+              "pointing_button": "button1",
+              "modifiers": ["left_command"]
+            }
+          ],
+          "conditions": [
+            { "type": "variable_if", "name": "windowsmac_enabled", "value": 1 }
+          ]
+        }
+      ]
+    }
+  ]
+}
