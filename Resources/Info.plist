@@ -22,5 +22,7 @@
     <string>14.0</string>
     <key>LSUIElement</key>
     <true/>
+    <key>NSAppleEventsUsageDescription</key>
+    <string>WindowsMac uses Finder automation to read and navigate the Finder window you are controlling.</string>
 </dict>
 </plist>
