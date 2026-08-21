@@ -1,0 +1,33 @@
+{
+  "title": "WindowsMac — Command Space",
+  "rules": [
+    {
+      "description": "WindowsMac — Cmd+Space to Ctrl+Space",
+      "manipulators": [
+        {
+          "type": "basic",
+          "from": {
+            "key_code": "spacebar",
+            "modifiers": {
+              "mandatory": ["command"],
+              "optional": ["caps_lock"]
+            }
+          },
+          "to": [
+            {
+              "key_code": "spacebar",
+              "modifiers": ["left_control"]
+            }
+          ],
+          "conditions": [
+            {
+              "type": "variable_if",
+              "name": "windowsmac_enabled",
+              "value": 1
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
