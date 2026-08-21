@@ -2,57 +2,74 @@ import Foundation
 import Testing
 @testable import WindowsMacCore
 
-@Test func finderPathAcceptsExistingDirectory() throws {
-    let directory = FileManager.default.temporaryDirectory
-        .appendingPathComponent(UUID().uuidString, isDirectory: true)
-    try FileManager.default.createDirectory(
-        at: directory,
-        withIntermediateDirectories: true
+@Test func finderPathNormalizesAbsolutePOSIXPath() {
+    #expect(
+        FinderPath.normalizedPath(from: "/tmp/WindowsMac")
+            == URL(fileURLWithPath: "/tmp/WindowsMac").standardizedFileURL.path
     )
-    defer { try? FileManager.default.removeItem(at: directory) }
+}
+
+@Test func finderPathDoesNotRequireTheDestinationToExist() {
+    let missing = "/tmp/windowsmac-\(UUID().uuidString)/missing"
 
     #expect(
-        FinderPath.normalizedDirectoryPath(from: directory.path)
-            == directory.standardizedFileURL.path
+        FinderPath.normalizedPath(from: missing)
+            == URL(fileURLWithPath: missing).standardizedFileURL.path
     )
 }
 
-@Test func finderPathAcceptsQuotedDirectory() throws {
-    let directory = FileManager.default.temporaryDirectory
-        .appendingPathComponent(UUID().uuidString, isDirectory: true)
-    try FileManager.default.createDirectory(
-        at: directory,
-        withIntermediateDirectories: true
+@Test func finderPathExpandsTilde() {
+    let expected = FileManager.default.homeDirectoryForCurrentUser
+        .appendingPathComponent("Documents")
+        .standardizedFileURL.path
+
+    #expect(FinderPath.normalizedPath(from: "~/Documents") == expected)
+}
+
+@Test func finderPathAcceptsDoubleQuotedPath() {
+    #expect(
+        FinderPath.normalizedPath(from: "\"/tmp/Some Folder\"")
+            == "/tmp/Some Folder"
     )
-    defer { try? FileManager.default.removeItem(at: directory) }
+}
+
+@Test func finderPathAcceptsSingleQuotedPath() {
+    #expect(
+        FinderPath.normalizedPath(from: "'/tmp/Some Folder'")
+            == "/tmp/Some Folder"
+    )
+}
+
+@Test func finderPathAcceptsPercentEncodedFileURL() {
+    let url = URL(fileURLWithPath: "/tmp/Windows Mac/éxample #1")
 
     #expect(
-        FinderPath.normalizedDirectoryPath(from: "\"\(directory.path)\"")
-            == directory.standardizedFileURL.path
+        FinderPath.normalizedPath(from: url.absoluteString)
+            == url.standardizedFileURL.path
     )
 }
 
-@Test func finderPathAcceptsFileURL() {
-    let home = FileManager.default.homeDirectoryForCurrentUser
+@Test func finderPathPreservesUnicodeAndSymbols() {
+    let path = "/tmp/Projet été & R&D #1"
 
     #expect(
-        FinderPath.normalizedDirectoryPath(from: home.absoluteString)
-            == home.standardizedFileURL.path
+        FinderPath.normalizedPath(from: path)
+            == URL(fileURLWithPath: path).standardizedFileURL.path
     )
 }
 
-@Test func finderPathRejectsMissingDirectory() {
-    let missing = FileManager.default.temporaryDirectory
-        .appendingPathComponent(UUID().uuidString, isDirectory: true)
-
-    #expect(FinderPath.normalizedDirectoryPath(from: missing.path) == nil)
+@Test func finderPathStandardizesParentComponents() {
+    #expect(
+        FinderPath.normalizedPath(from: "/tmp/one/../two")
+            == "/tmp/two"
+    )
 }
 
-@Test func finderPathRejectsRegularFile() throws {
-    let file = FileManager.default.temporaryDirectory
-        .appendingPathComponent(UUID().uuidString)
-    try Data().write(to: file)
-    defer { try? FileManager.default.removeItem(at: file) }
+@Test func finderPathRejectsRelativePath() {
+    #expect(FinderPath.normalizedPath(from: "Documents/Client") == nil)
+}
 
-    #expect(FinderPath.normalizedDirectoryPath(from: file.path) == nil)
+@Test func finderPathRejectsEmptyInput() {
+    #expect(FinderPath.normalizedPath(from: "   ") == nil)
+    #expect(FinderPath.normalizedPath(from: "\"\"") == nil)
 }
