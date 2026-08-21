@@ -124,7 +124,7 @@ enum FinderAutomation {
     }
 
     static func navigate(to path: String, windowID: Int32?) -> FinderNavigationResult {
-        let pathLiteral = appleScriptStringLiteral(path)
+        let pathLiteral = AppleScriptString.expression(for: path)
         let windowIDValue = windowID ?? 0
 
         let source = """
@@ -217,42 +217,5 @@ enum FinderAutomation {
         }
 
         return .success(descriptor)
-    }
-
-    /// Produces an AppleScript expression rather than interpolating raw user text into a
-    /// quoted literal. Quotes, backslashes and control characters therefore cannot break
-    /// the script source, including valid POSIX paths that contain newlines.
-    private static func appleScriptStringLiteral(_ value: String) -> String {
-        var expressions: [String] = []
-        var current = ""
-
-        func appendCurrent() {
-            guard !current.isEmpty else { return }
-            expressions.append("\"\(current)\"")
-            current.removeAll(keepingCapacity: true)
-        }
-
-        for character in value {
-            switch character {
-            case "\\":
-                current += "\\\\"
-            case "\"":
-                current += "\\\""
-            case "\n":
-                appendCurrent()
-                expressions.append("linefeed")
-            case "\r":
-                appendCurrent()
-                expressions.append("return")
-            case "\t":
-                appendCurrent()
-                expressions.append("tab")
-            default:
-                current.append(character)
-            }
-        }
-
-        appendCurrent()
-        return expressions.isEmpty ? "\"\"" : expressions.joined(separator: " & ")
     }
 }
