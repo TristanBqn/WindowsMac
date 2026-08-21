@@ -11,7 +11,7 @@ struct KarabinerController {
         process.arguments = [
             "--silent",
             "--set-variables",
-            "{\"windowsmac_enabled\":\(enabled ? 1 : 0)}"
+            "{\"windowsmac_enabled\":\(enabled ? 1 : 0),\"windowsmac_app_switcher_active\":0}"
         ]
 
         do {
