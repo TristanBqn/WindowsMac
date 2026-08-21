@@ -133,6 +133,60 @@ enum FinderAutomation {
         }
     }
 
+    /// Activates a stable Finder window slot. Finder's normal numeric indexes are
+    /// front-to-back and change whenever a window is raised, so WindowsMac sorts the
+    /// persistent Finder window IDs instead. Slots therefore remain stable while the
+    /// corresponding windows stay open.
+    static func activateWindow(index: Int) -> Result<Bool, FinderAutomationFailure> {
+        guard index > 0 else { return .success(false) }
+
+        let idsResult = run(
+            """
+            tell application "Finder"
+                return id of every Finder window
+            end tell
+            """
+        )
+
+        let ids: [Int32]
+        switch idsResult {
+        case .failure(let failure):
+            return .failure(failure)
+        case .success(let descriptor):
+            var values: [Int32] = []
+            if descriptor.numberOfItems > 0 {
+                for itemIndex in 1...descriptor.numberOfItems {
+                    if let item = descriptor.atIndex(itemIndex) {
+                        values.append(item.int32Value)
+                    }
+                }
+            }
+            ids = values.sorted()
+        }
+
+        guard ids.indices.contains(index - 1) else {
+            return .success(false)
+        }
+
+        let targetID = ids[index - 1]
+        let source = """
+        tell application "Finder"
+            set matchingWindows to every Finder window whose id is \(targetID)
+            if (count of matchingWindows) is 0 then return false
+            set index of item 1 of matchingWindows to 1
+            activate
+            return true
+        end tell
+        """
+
+        switch run(source) {
+        case .failure(let failure):
+            return .failure(failure)
+        case .success(let descriptor):
+            return .success(descriptor.booleanValue)
+        }
+    }
+
     static func navigate(to path: String, windowID: Int32?) -> FinderNavigationResult {
         let pathLiteral = AppleScriptString.expression(for: path)
         let windowIDValue = windowID ?? 0
