@@ -100,6 +100,29 @@ enum FinderAutomation {
         }
     }
 
+    static func openSelectedChildFolder() -> Result<Void, FinderAutomationFailure> {
+        let source = """
+        tell application "Finder"
+            if (count of selection) is not 1 then return
+            set selectedItem to item 1 of selection
+            if class of selectedItem is folder then
+                if (count of Finder windows) is 0 then
+                    open selectedItem
+                else
+                    set target of front Finder window to selectedItem
+                end if
+            end if
+        end tell
+        """
+
+        switch run(source) {
+        case .success:
+            return .success(())
+        case .failure(let failure):
+            return .failure(failure)
+        }
+    }
+
     static func navigate(to path: String, windowID: Int32?) -> FinderNavigationResult {
         let pathLiteral = appleScriptStringLiteral(path)
         let windowIDValue = windowID ?? 0
