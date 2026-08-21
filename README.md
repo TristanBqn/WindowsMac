@@ -21,7 +21,7 @@ Implemented in the bootstrap:
   - `Alt+Up` goes to the parent folder.
   - `Alt+Down` opens the selected child only when it is a folder.
   - `Ctrl+L` opens a native editable address bar anchored to the active Finder window.
-  - the address bar shows the current POSIX path, accepts `Ctrl+A/C/V`, navigates with `Enter`, and closes with `Escape`.
+  - the address bar shows the current POSIX path, receives focus immediately, supports `Ctrl+A/C/V`, navigates with `Enter`, and closes with `Escape`.
   - address navigation supports POSIX paths, `~`, quoted paths and `file://` URLs, while rejecting missing paths and regular files.
 - Window management:
   - `Win+Left/Right/Up/Down` uses Karabiner `send_user_command` and the native helper.
