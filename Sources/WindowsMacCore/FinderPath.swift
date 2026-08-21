@@ -1,9 +1,17 @@
 import Foundation
 
 public enum FinderPath {
-    /// Converts text entered in the Finder address bar into an existing directory path.
-    /// Supports POSIX paths, `~` expansion and `file://` URLs.
-    public static func normalizedDirectoryPath(from input: String) -> String? {
+    /// Normalizes text entered in the Finder address bar without touching the filesystem.
+    ///
+    /// Supported inputs:
+    /// - absolute POSIX paths
+    /// - `~`-prefixed paths
+    /// - quoted paths
+    /// - `file://` URLs
+    ///
+    /// Existence and folder/package validation are deliberately delegated to Finder/AppleScript
+    /// so the UI does not synchronously probe network, cloud or privacy-protected locations.
+    public static func normalizedPath(from input: String) -> String? {
         var value = input.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !value.isEmpty else { return nil }
 
@@ -12,31 +20,27 @@ public enum FinderPath {
            (value.hasPrefix("'") && value.hasSuffix("'")) {
             value.removeFirst()
             value.removeLast()
+            value = value.trimmingCharacters(in: .whitespacesAndNewlines)
         }
 
-        let url: URL
+        guard !value.isEmpty else { return nil }
+
         if value.lowercased().hasPrefix("file://") {
-            guard let fileURL = URL(string: value), fileURL.isFileURL else {
+            guard
+                let fileURL = URL(string: value),
+                fileURL.isFileURL
+            else {
                 return nil
             }
-            url = fileURL
-        } else {
-            let expanded = NSString(string: value).expandingTildeInPath
-            url = URL(fileURLWithPath: expanded)
+
+            return fileURL.standardizedFileURL.path
         }
 
-        let standardized = url.standardizedFileURL
-        var isDirectory = ObjCBool(false)
-        guard
-            FileManager.default.fileExists(
-                atPath: standardized.path,
-                isDirectory: &isDirectory
-            ),
-            isDirectory.boolValue
-        else {
+        let expanded = NSString(string: value).expandingTildeInPath
+        guard expanded.hasPrefix("/") else {
             return nil
         }
 
-        return standardized.path
+        return URL(fileURLWithPath: expanded).standardizedFileURL.path
     }
 }
