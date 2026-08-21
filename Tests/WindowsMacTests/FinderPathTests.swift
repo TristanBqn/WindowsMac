@@ -1,75 +1,50 @@
 import Foundation
-import Testing
+import XCTest
 @testable import WindowsMacCore
 
-@Test func finderPathNormalizesAbsolutePOSIXPath() {
-    #expect(
-        FinderPath.normalizedPath(from: "/tmp/WindowsMac")
-            == URL(fileURLWithPath: "/tmp/WindowsMac").standardizedFileURL.path
-    )
-}
+final class FinderPathTests: XCTestCase {
+    func testNormalizesAbsolutePOSIXPath() {
+        XCTAssertEqual(FinderPath.normalizedPath(from: "/tmp/WindowsMac"), URL(fileURLWithPath: "/tmp/WindowsMac").standardizedFileURL.path)
+    }
 
-@Test func finderPathDoesNotRequireTheDestinationToExist() {
-    let missing = "/tmp/windowsmac-\(UUID().uuidString)/missing"
+    func testDoesNotRequireDestinationToExist() {
+        let missing = "/tmp/windowsmac-\(UUID().uuidString)/missing"
+        XCTAssertEqual(FinderPath.normalizedPath(from: missing), URL(fileURLWithPath: missing).standardizedFileURL.path)
+    }
 
-    #expect(
-        FinderPath.normalizedPath(from: missing)
-            == URL(fileURLWithPath: missing).standardizedFileURL.path
-    )
-}
+    func testExpandsTilde() {
+        let expected = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Documents").standardizedFileURL.path
+        XCTAssertEqual(FinderPath.normalizedPath(from: "~/Documents"), expected)
+    }
 
-@Test func finderPathExpandsTilde() {
-    let expected = FileManager.default.homeDirectoryForCurrentUser
-        .appendingPathComponent("Documents")
-        .standardizedFileURL.path
+    func testAcceptsDoubleQuotedPath() {
+        XCTAssertEqual(FinderPath.normalizedPath(from: "\"/tmp/Some Folder\""), "/tmp/Some Folder")
+    }
 
-    #expect(FinderPath.normalizedPath(from: "~/Documents") == expected)
-}
+    func testAcceptsSingleQuotedPath() {
+        XCTAssertEqual(FinderPath.normalizedPath(from: "'/tmp/Some Folder'"), "/tmp/Some Folder")
+    }
 
-@Test func finderPathAcceptsDoubleQuotedPath() {
-    #expect(
-        FinderPath.normalizedPath(from: "\"/tmp/Some Folder\"")
-            == "/tmp/Some Folder"
-    )
-}
+    func testAcceptsPercentEncodedFileURL() {
+        let url = URL(fileURLWithPath: "/tmp/Windows Mac/éxample #1")
+        XCTAssertEqual(FinderPath.normalizedPath(from: url.absoluteString), url.standardizedFileURL.path)
+    }
 
-@Test func finderPathAcceptsSingleQuotedPath() {
-    #expect(
-        FinderPath.normalizedPath(from: "'/tmp/Some Folder'")
-            == "/tmp/Some Folder"
-    )
-}
+    func testPreservesUnicodeAndSymbols() {
+        let path = "/tmp/Projet été & R&D #1"
+        XCTAssertEqual(FinderPath.normalizedPath(from: path), URL(fileURLWithPath: path).standardizedFileURL.path)
+    }
 
-@Test func finderPathAcceptsPercentEncodedFileURL() {
-    let url = URL(fileURLWithPath: "/tmp/Windows Mac/éxample #1")
+    func testStandardizesParentComponents() {
+        XCTAssertEqual(FinderPath.normalizedPath(from: "/tmp/one/../two"), "/tmp/two")
+    }
 
-    #expect(
-        FinderPath.normalizedPath(from: url.absoluteString)
-            == url.standardizedFileURL.path
-    )
-}
+    func testRejectsRelativePath() {
+        XCTAssertNil(FinderPath.normalizedPath(from: "Documents/Client"))
+    }
 
-@Test func finderPathPreservesUnicodeAndSymbols() {
-    let path = "/tmp/Projet été & R&D #1"
-
-    #expect(
-        FinderPath.normalizedPath(from: path)
-            == URL(fileURLWithPath: path).standardizedFileURL.path
-    )
-}
-
-@Test func finderPathStandardizesParentComponents() {
-    #expect(
-        FinderPath.normalizedPath(from: "/tmp/one/../two")
-            == "/tmp/two"
-    )
-}
-
-@Test func finderPathRejectsRelativePath() {
-    #expect(FinderPath.normalizedPath(from: "Documents/Client") == nil)
-}
-
-@Test func finderPathRejectsEmptyInput() {
-    #expect(FinderPath.normalizedPath(from: "   ") == nil)
-    #expect(FinderPath.normalizedPath(from: "\"\"") == nil)
+    func testRejectsEmptyInput() {
+        XCTAssertNil(FinderPath.normalizedPath(from: "   "))
+        XCTAssertNil(FinderPath.normalizedPath(from: "\"\""))
+    }
 }
