@@ -44,21 +44,24 @@ IDE-integrated terminals require a separate focus-aware rule and remain planned.
 | Alt+Right | Navigate forward | Implemented; ANSI mapping currently |
 | Alt+Up | Parent folder | Implemented |
 | Alt+Down | Enter selected folder only | Implemented |
-| Ctrl+L | Windows-style editable address bar | Planned |
+| Ctrl+L | Windows-style editable address bar | Implemented |
 | Win+E | Focus/open Finder | Implemented |
 
-`Enter` must remain a normal Return key while a Finder text element has focus, including filename rename and search fields.
+`Enter` remains a normal Return key while a Finder text element has focus, including filename rename and search fields.
 
 ### Finder address bar
 
-Planned behaviour:
+Implemented behaviour:
 
-- `Ctrl+L` opens an editable field containing the active Finder window's POSIX path.
-- `Ctrl+A`, `Ctrl+C`, `Ctrl+V` behave as under Windows.
-- `Enter` navigates to the entered path.
-- `Escape` closes the field.
-
-Until the panel exists, WindowsMac does **not** intercept `Ctrl+L` in Finder.
+- `Ctrl+L` opens a lightweight native panel anchored near the top of the active Finder window.
+- The field contains the normalized POSIX path of the current Finder folder and receives focus immediately.
+- `Ctrl+A`, `Ctrl+C` and `Ctrl+V` behave as under Windows through the normal WindowsMac Control remaps.
+- `Enter` validates the entered path and navigates the existing Finder window to it.
+- `Escape` closes the field and returns focus to Finder.
+- Clicking another application dismisses the panel without stealing focus back.
+- POSIX paths, `~`, quoted paths and `file://` URLs are accepted.
+- Missing paths and regular files are rejected without navigating.
+- Finder virtual locations that do not expose a filesystem path fail safely instead of fabricating a path.
 
 ## Window management
 
