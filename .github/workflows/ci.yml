@@ -1,0 +1,29 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v6
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode.app
+      - name: Validate Karabiner JSON
+        run: |
+          for file in Karabiner/*.json; do
+            python3 -m json.tool "$file" >/dev/null
+          done
+      - name: Validate app Info.plist
+        run: |
+          plutil -lint Resources/Info.plist
+          /usr/libexec/PlistBuddy -c "Print :NSAppleEventsUsageDescription" Resources/Info.plist >/dev/null
+      - name: Build
+        run: swift build
+      - name: Test
+        run: swift test
+      - name: Build app bundle
+        run: zsh Scripts/build-app.sh
