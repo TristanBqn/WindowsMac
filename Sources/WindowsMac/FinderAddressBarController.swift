@@ -202,6 +202,41 @@ final class FinderAddressBarController: NSObject, NSTextFieldDelegate, NSWindowD
 private final class AddressBarPanel: NSPanel {
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { false }
+
+    /// WindowsMac's own address bar must understand physical Control shortcuts even
+    /// if Karabiner does not rewrite the event because of frontmost-app timing.
+    override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        guard event.type == .keyDown else {
+            return super.performKeyEquivalent(with: event)
+        }
+
+        let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+        guard
+            flags.contains(.control),
+            !flags.contains(.command),
+            let editor = firstResponder as? NSTextView,
+            let key = event.charactersIgnoringModifiers?.lowercased()
+        else {
+            return super.performKeyEquivalent(with: event)
+        }
+
+        switch key {
+        case "a":
+            editor.selectAll(nil)
+            return true
+        case "c":
+            editor.copy(nil)
+            return true
+        case "v":
+            editor.paste(nil)
+            return true
+        case "x":
+            editor.cut(nil)
+            return true
+        default:
+            return super.performKeyEquivalent(with: event)
+        }
+    }
 }
 
 private extension CGRect {
