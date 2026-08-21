@@ -14,6 +14,10 @@ jobs:
         run: sudo xcode-select -s /Applications/Xcode.app
       - name: Validate Karabiner JSON
         run: python3 -m json.tool Karabiner/windowsmac.json >/dev/null
+      - name: Validate app Info.plist
+        run: |
+          plutil -lint Resources/Info.plist
+          /usr/libexec/PlistBuddy -c "Print :NSAppleEventsUsageDescription" Resources/Info.plist >/dev/null
       - name: Build
         run: swift build
       - name: Test
