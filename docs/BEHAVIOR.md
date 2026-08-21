@@ -54,14 +54,20 @@ IDE-integrated terminals require a separate focus-aware rule and remain planned.
 Implemented behaviour:
 
 - `Ctrl+L` opens a lightweight native panel anchored near the top of the active Finder window.
+- The exact Finder window ID is captured when `Ctrl+L` is pressed. Submitting later targets that same Finder window rather than whichever Finder window happens to be frontmost at submission time.
 - The field contains the normalized POSIX path of the current Finder folder and receives focus immediately.
 - `Ctrl+A`, `Ctrl+C` and `Ctrl+V` behave as under Windows through the normal WindowsMac Control remaps.
-- `Enter` validates the entered path and navigates the existing Finder window to it.
+- `Enter` submits asynchronously so slow network/cloud path resolution does not block the panel UI.
 - `Escape` closes the field and returns focus to Finder.
 - Clicking another application dismisses the panel without stealing focus back.
 - POSIX paths, `~`, quoted paths and `file://` URLs are accepted.
-- Missing paths and regular files are rejected without navigating.
+- Path normalization itself never probes the filesystem. Finder/AppleScript resolves the destination and rejects missing paths, regular files and package folders.
 - Finder virtual locations that do not expose a filesystem path fail safely instead of fabricating a path.
+- AppleScript returns structured descriptor lists for Finder context/navigation status rather than encoding path and geometry into delimiter-separated text.
+- User-supplied paths are encoded as AppleScript expressions so quotes, backslashes and control characters cannot break the script source.
+- Finder Automation denial produces an explicit permission dialog with a shortcut to macOS Automation settings.
+- The app bundle declares `NSAppleEventsUsageDescription`, as required for Apple Events.
+- The AppleScript runtime is initialized on the main thread at app launch before Finder work is dispatched to background tasks.
 
 ## Window management
 
