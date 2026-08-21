@@ -21,8 +21,11 @@ Implemented in the bootstrap:
   - `Alt+Up` goes to the parent folder.
   - `Alt+Down` opens the selected child only when it is a folder.
   - `Ctrl+L` opens a native editable address bar anchored to the active Finder window.
+  - the exact Finder window is captured by Finder window ID when `Ctrl+L` is pressed, so submitting the path cannot accidentally navigate a different Finder window.
   - the address bar shows the current POSIX path, receives focus immediately, supports `Ctrl+A/C/V`, navigates with `Enter`, and closes with `Escape`.
-  - address navigation supports POSIX paths, `~`, quoted paths and `file://` URLs, while rejecting missing paths and regular files.
+  - path normalization is syntax-only and nonblocking; Finder/AppleScript performs existence, folder and package validation asynchronously.
+  - POSIX paths, `~`, quoted paths and `file://` URLs are supported; missing paths, regular files and package folders are rejected without navigation.
+  - denied Finder Automation permission produces an explicit alert with a shortcut to macOS Automation settings.
 - Window management:
   - `Win+Left/Right/Up/Down` uses Karabiner `send_user_command` and the native helper.
   - successive `Win+Up` from the top half maximizes without entering native fullscreen.
@@ -33,7 +36,7 @@ Implemented in the bootstrap:
 - Emergency disable: `Ctrl+Alt+Win+F12`.
 - AppKit ↔ Accessibility coordinate conversion and multi-display-aware geometry.
 - Native `.app` bundle build script.
-- CI for JSON validation, Swift build/tests and app bundling.
+- CI for Karabiner JSON, app `Info.plist`, Swift build/tests and app bundling.
 
 Not yet implemented:
 
@@ -59,6 +62,7 @@ Karabiner-Elements 16+
                   WindowsMac
                   - WindowManager
                   - FinderController
+                  - FinderAutomation
                   - Finder address bar
                   - Menu-bar state
                        |
@@ -68,6 +72,7 @@ Karabiner-Elements 16+
                 - geometry
                 - coordinate conversion
                 - path normalization
+                - AppleScript string encoding
                 - command model
 ```
 
@@ -94,12 +99,19 @@ zsh Scripts/lint-karabiner.sh
 
 If Karabiner is installed, its own `--lint-complex-modifications` validator is used after JSON syntax validation.
 
+## Permissions
+
+WindowsMac requires:
+
+- **Accessibility** for window positioning and resizing.
+- **Automation → Finder** for reading Finder paths, identifying the active Finder window and navigating that exact window.
+
+The application bundle declares `NSAppleEventsUsageDescription`, and the UI surfaces a direct macOS Settings shortcut when Finder Automation is denied.
+
 ## Requirements
 
 - macOS 14+
 - Karabiner-Elements 16+
-- Accessibility permission for WindowsMac window management
-- Automation permission for Finder address/navigation actions
 
 ## License
 
