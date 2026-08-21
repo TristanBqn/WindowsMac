@@ -1,24 +1,26 @@
-import Testing
+import XCTest
 @testable import WindowsMacCore
 
-@Test func appleScriptStringEncodesQuotesAndBackslashes() {
-    #expect(
-        AppleScriptString.expression(for: "/tmp/A \\\"quoted\\\" path")
-            == "\"/tmp/A \\\\\\\"quoted\\\\\\\" path\""
-    )
-}
+final class AppleScriptStringTests: XCTestCase {
+    func testEncodesQuotesAndBackslashes() {
+        XCTAssertEqual(
+            AppleScriptString.expression(for: "/tmp/A \\\"quoted\\\" path"),
+            "\"/tmp/A \\\\\\\"quoted\\\\\\\" path\""
+        )
+    }
 
-@Test func appleScriptStringEncodesControlCharactersAsExpressions() {
-    #expect(
-        AppleScriptString.expression(for: "one\ntwo\rthree\tfour")
-            == "\"one\" & linefeed & \"two\" & return & \"three\" & tab & \"four\""
-    )
-}
+    func testEncodesControlCharactersAsExpressions() {
+        XCTAssertEqual(
+            AppleScriptString.expression(for: "one\ntwo\rthree\tfour"),
+            "\"one\" & linefeed & \"two\" & return & \"three\" & tab & \"four\""
+        )
+    }
 
-@Test func appleScriptStringHandlesOnlyControlCharacter() {
-    #expect(AppleScriptString.expression(for: "\n") == "linefeed")
-}
+    func testHandlesOnlyControlCharacter() {
+        XCTAssertEqual(AppleScriptString.expression(for: "\n"), "linefeed")
+    }
 
-@Test func appleScriptStringHandlesEmptyString() {
-    #expect(AppleScriptString.expression(for: "") == "\"\"")
+    func testHandlesEmptyString() {
+        XCTAssertEqual(AppleScriptString.expression(for: ""), "\"\"")
+    }
 }
