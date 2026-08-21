@@ -5,10 +5,21 @@ import WindowsMacCore
 @MainActor
 final class WindowManager {
     private var restoreFrames: [CFHashCode: CGRect] = [:]
+    private var didPresentAccessibilityAlert = false
+
+    func requestAccessibilityPermissionIfNeeded() {
+        guard !AXIsProcessTrusted() else { return }
+
+        let options = [
+            kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true
+        ] as CFDictionary
+        _ = AXIsProcessTrustedWithOptions(options)
+    }
 
     func snap(_ direction: Direction) {
         guard AXIsProcessTrusted() else {
-            NSLog("WindowsMac requires Accessibility permission for window snapping.")
+            requestAccessibilityPermissionIfNeeded()
+            presentAccessibilityAlertIfNeeded()
             return
         }
 
@@ -55,6 +66,25 @@ final class WindowManager {
         )
 
         setFrame(targetAXFrame, of: window)
+    }
+
+    private func presentAccessibilityAlertIfNeeded() {
+        guard !didPresentAccessibilityAlert else { return }
+        didPresentAccessibilityAlert = true
+
+        let alert = NSAlert()
+        alert.alertStyle = .warning
+        alert.messageText = "Accessibility permission required"
+        alert.informativeText = "WindowsMac needs Accessibility permission to resize and move windows with the Windows key and arrow keys."
+        alert.addButton(withTitle: "Open Accessibility Settings")
+        alert.addButton(withTitle: "Cancel")
+
+        if alert.runModal() == .alertFirstButtonReturn,
+           let url = URL(
+               string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"
+           ) {
+            NSWorkspace.shared.open(url)
+        }
     }
 
     private func focusedWindow() -> AXUIElement? {
