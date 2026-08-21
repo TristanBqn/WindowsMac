@@ -25,6 +25,16 @@ enum FinderNavigationResult: Sendable, Equatable {
 }
 
 enum FinderAutomation {
+    /// Initializes the AppleScript runtime from the main thread before any background
+    /// automation work. Recent macOS/XProtect builds can otherwise stall the first
+    /// NSAppleScript initialization when it happens on a worker thread.
+    @MainActor
+    static func prepareRuntime() {
+        guard let script = NSAppleScript(source: "return 1") else { return }
+        var error: NSDictionary?
+        _ = script.executeAndReturnError(&error)
+    }
+
     static func currentContext() -> Result<FinderWindowContext, FinderAutomationFailure> {
         let source = """
         tell application "Finder"
