@@ -77,7 +77,7 @@ final class WindowManager {
             return nil
         }
 
-        return value as! AXUIElement
+        return unsafeBitCast(value, to: AXUIElement.self)
     }
 
     private func frame(of window: AXUIElement) -> CGRect? {
@@ -87,18 +87,23 @@ final class WindowManager {
         guard
             AXUIElementCopyAttributeValue(window, kAXPositionAttribute as CFString, &positionValue) == .success,
             AXUIElementCopyAttributeValue(window, kAXSizeAttribute as CFString, &sizeValue) == .success,
-            let positionValue = positionValue as? AXValue,
-            let sizeValue = sizeValue as? AXValue
+            let positionValue,
+            let sizeValue,
+            CFGetTypeID(positionValue) == AXValueGetTypeID(),
+            CFGetTypeID(sizeValue) == AXValueGetTypeID()
         else {
             return nil
         }
+
+        let positionAXValue = unsafeBitCast(positionValue, to: AXValue.self)
+        let sizeAXValue = unsafeBitCast(sizeValue, to: AXValue.self)
 
         var position = CGPoint.zero
         var size = CGSize.zero
 
         guard
-            AXValueGetValue(positionValue, .cgPoint, &position),
-            AXValueGetValue(sizeValue, .cgSize, &size)
+            AXValueGetValue(positionAXValue, .cgPoint, &position),
+            AXValueGetValue(sizeAXValue, .cgSize, &size)
         else {
             return nil
         }
