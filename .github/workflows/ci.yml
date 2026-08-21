@@ -14,8 +14,9 @@ jobs:
         run: sudo xcode-select -s /Applications/Xcode.app
       - name: Validate Karabiner JSON
         run: |
-          python3 -m json.tool Karabiner/windowsmac.json >/dev/null
-          python3 -m json.tool Karabiner/windowsmac-command-space.json >/dev/null
+          for file in Karabiner/*.json; do
+            python3 -m json.tool "$file" >/dev/null
+          done
       - name: Validate app Info.plist
         run: |
           plutil -lint Resources/Info.plist
