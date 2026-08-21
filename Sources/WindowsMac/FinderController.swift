@@ -3,164 +3,157 @@ import WindowsMacCore
 
 @MainActor
 final class FinderController {
-    private struct Context {
-        let path: String
-        let windowFrame: CGRect?
-    }
+    private var addressContext: FinderWindowContext?
 
     private lazy var addressBarController = FinderAddressBarController(
-        onSubmit: { [weak self] rawPath in
-            self?.navigate(to: rawPath) ?? false
+        onSubmit: { [weak self] rawPath, completion in
+            guard let self else {
+                completion(.cancelled)
+                return
+            }
+            self.submitAddress(rawPath, completion: completion)
         },
-        onDismiss: { [weak self] in
-            self?.activateFinder()
+        onDismiss: { [weak self] reactivateFinder in
+            guard let self else { return }
+            self.addressContext = nil
+            if reactivateFinder {
+                self.activateFinder()
+            }
         }
     )
 
     func openSelectedChildFolder() {
-        let source = """
-        tell application "Finder"
-            if (count of selection) is not 1 then return
-            set selectedItem to item 1 of selection
-            if class of selectedItem is folder then
-                if (count of Finder windows) is 0 then
-                    open selectedItem
-                else
-                    set target of front Finder window to selectedItem
-                end if
-            end if
-        end tell
-        """
+        Task { [weak self] in
+            let result = await Task.detached(priority: .userInitiated) {
+                FinderAutomation.openSelectedChildFolder()
+            }.value
 
-        execute(source, logPrefix: "Finder navigation")
+            guard let self else { return }
+            if case .failure(let failure) = result {
+                self.handleAutomationFailure(failure)
+            }
+        }
     }
 
     func showAddressBar() {
-        guard let context = currentContext() else {
-            NSSound.beep()
+        Task { [weak self] in
+            let result = await Task.detached(priority: .userInitiated) {
+                FinderAutomation.currentContext()
+            }.value
+
+            guard let self else { return }
+
+            switch result {
+            case .success(let context):
+                self.addressContext = context
+                self.addressBarController.show(
+                    path: context.path,
+                    anchorFrame: context.windowFrame
+                )
+
+            case .failure(let failure):
+                self.handleAutomationFailure(failure)
+            }
+        }
+    }
+
+    private func submitAddress(
+        _ rawPath: String,
+        completion: @escaping (AddressBarSubmissionResult) -> Void
+    ) {
+        guard let path = FinderPath.normalizedPath(from: rawPath) else {
+            completion(
+                .failure("Enter an absolute POSIX path, ~/ path, or file:// URL.")
+            )
             return
         }
 
-        addressBarController.show(
-            path: context.path,
-            anchorFrame: context.windowFrame
-        )
+        let windowID = addressContext?.windowID
+
+        Task { [weak self] in
+            let result = await Task.detached(priority: .userInitiated) {
+                FinderAutomation.navigate(to: path, windowID: windowID)
+            }.value
+
+            guard let self else {
+                completion(.cancelled)
+                return
+            }
+
+            switch result {
+            case .success:
+                completion(.success)
+
+            case .invalidPath:
+                completion(.failure("That path does not exist or is unavailable."))
+
+            case .notFolder:
+                completion(.failure("That path points to a file, not a folder."))
+
+            case .package:
+                completion(.failure("That path is a package, not a navigable folder."))
+
+            case .windowMissing:
+                completion(.failure("The original Finder window is no longer available."))
+
+            case .automationDenied:
+                completion(.cancelled)
+                self.presentAutomationPermissionAlert()
+
+            case .failure(let message):
+                completion(.failure(message))
+            }
+        }
     }
 
-    private func currentContext() -> Context? {
-        let source = """
-        tell application "Finder"
-            if (count of Finder windows) is 0 then
-                return POSIX path of (path to home folder)
-            end if
+    private func handleAutomationFailure(_ failure: FinderAutomationFailure) {
+        switch failure {
+        case .automationDenied:
+            presentAutomationPermissionAlert()
 
-            try
-                set currentPath to POSIX path of (target of front Finder window as alias)
-            on error
-                return ""
-            end try
+        case .noFilesystemPath:
+            presentError(
+                title: "Finder location unavailable",
+                message: "This Finder location does not expose a normal filesystem path."
+            )
 
-            set b to bounds of front Finder window
-            return currentPath & linefeed & ((item 1 of b) as text) & "," & ((item 2 of b) as text) & "," & ((item 3 of b) as text) & "," & ((item 4 of b) as text)
-        end tell
-        """
-
-        var error: NSDictionary?
-        guard
-            let result = NSAppleScript(source: source)?.executeAndReturnError(&error),
-            error == nil,
-            let value = result.stringValue,
-            !value.isEmpty
-        else {
-            if let error {
-                NSLog("WindowsMac Finder path lookup failed: \(error)")
-            }
-            return nil
+        case .execution(let message):
+            presentError(
+                title: "Finder automation failed",
+                message: message
+            )
         }
-
-        let lines = value.split(separator: "\n", maxSplits: 1, omittingEmptySubsequences: false)
-        guard let first = lines.first else { return nil }
-
-        let rawPath = String(first)
-        let path = FinderPath.normalizedDirectoryPath(from: rawPath) ?? rawPath
-        var appKitWindowFrame: CGRect?
-
-        if lines.count == 2 {
-            let values = lines[1].split(separator: ",").compactMap { Double($0) }
-            if values.count == 4,
-               let primaryScreen = NSScreen.screens.first {
-                let axFrame = CGRect(
-                    x: values[0],
-                    y: values[1],
-                    width: values[2] - values[0],
-                    height: values[3] - values[1]
-                )
-                appKitWindowFrame = CoordinateConverter.accessibilityToAppKit(
-                    axFrame,
-                    primaryScreenFrame: primaryScreen.frame
-                )
-            }
-        }
-
-        return Context(path: path, windowFrame: appKitWindowFrame)
     }
 
-    private func navigate(to rawPath: String) -> Bool {
-        guard let path = FinderPath.normalizedDirectoryPath(from: rawPath) else {
-            return false
+    private func presentAutomationPermissionAlert() {
+        let alert = NSAlert()
+        alert.alertStyle = .warning
+        alert.messageText = "Finder permission required"
+        alert.informativeText = "WindowsMac needs permission to control Finder so it can read the current path and navigate the Finder window you selected."
+        alert.addButton(withTitle: "Open Automation Settings")
+        alert.addButton(withTitle: "Cancel")
+
+        if alert.runModal() == .alertFirstButtonReturn,
+           let url = URL(
+               string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Automation"
+           ) {
+            NSWorkspace.shared.open(url)
         }
+    }
 
-        let escapedPath = appleScriptEscaped(path)
-        let source = """
-        tell application "Finder"
-            try
-                set destinationFolder to (POSIX file "\(escapedPath)" as alias)
-                if (count of Finder windows) is 0 then
-                    open destinationFolder
-                else
-                    set target of front Finder window to destinationFolder
-                end if
-                activate
-                return "ok"
-            on error errorMessage
-                return "error:" & errorMessage
-            end try
-        end tell
-        """
-
-        var error: NSDictionary?
-        guard
-            let result = NSAppleScript(source: source)?.executeAndReturnError(&error),
-            error == nil,
-            result.stringValue == "ok"
-        else {
-            if let error {
-                NSLog("WindowsMac Finder address navigation failed: \(error)")
-            }
-            return false
-        }
-
-        return true
+    private func presentError(title: String, message: String) {
+        let alert = NSAlert()
+        alert.alertStyle = .warning
+        alert.messageText = title
+        alert.informativeText = message
+        alert.addButton(withTitle: "OK")
+        alert.runModal()
     }
 
     private func activateFinder() {
-        execute(
-            "tell application \"Finder\" to activate",
-            logPrefix: "Finder activation"
-        )
-    }
-
-    private func execute(_ source: String, logPrefix: String) {
-        var error: NSDictionary?
-        NSAppleScript(source: source)?.executeAndReturnError(&error)
-        if let error {
-            NSLog("WindowsMac \(logPrefix) failed: \(error)")
-        }
-    }
-
-    private func appleScriptEscaped(_ value: String) -> String {
-        value
-            .replacingOccurrences(of: "\\", with: "\\\\")
-            .replacingOccurrences(of: "\"", with: "\\\"")
+        let finder = NSRunningApplication.runningApplications(
+            withBundleIdentifier: "com.apple.finder"
+        ).first
+        finder?.activate(options: [.activateIgnoringOtherApps])
     }
 }
