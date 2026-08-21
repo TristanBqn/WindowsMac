@@ -9,8 +9,14 @@ jobs:
   test:
     runs-on: macos-15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Select Xcode
         run: sudo xcode-select -s /Applications/Xcode.app
+      - name: Validate Karabiner JSON
+        run: python3 -m json.tool Karabiner/windowsmac.json >/dev/null
+      - name: Build
+        run: swift build
       - name: Test
         run: swift test
+      - name: Build app bundle
+        run: zsh Scripts/build-app.sh

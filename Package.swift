@@ -8,15 +8,21 @@ let package = Package(
         .macOS(.v14)
     ],
     products: [
+        .library(name: "WindowsMacCore", targets: ["WindowsMacCore"]),
         .executable(name: "WindowsMac", targets: ["WindowsMac"])
     ],
     targets: [
+        .target(
+            name: "WindowsMacCore"
+        ),
         .executableTarget(
-            name: "WindowsMac"
+            name: "WindowsMac",
+            dependencies: ["WindowsMacCore"]
         ),
         .testTarget(
             name: "WindowsMacTests",
-            dependencies: ["WindowsMac"]
+            dependencies: ["WindowsMacCore"],
+            path: "Tests/WindowsMacTests"
         )
     ]
 )

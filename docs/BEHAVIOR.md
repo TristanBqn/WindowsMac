@@ -1,107 +1,112 @@
 # WindowsMac behavioural specification
 
-This document is the source of truth for user-visible keyboard behaviour.
+This document is the source of truth for user-visible behaviour.
+
+Status markers:
+
+- **Implemented**: present in the current bootstrap.
+- **Planned**: specified but not yet intercepted.
 
 ## Global Windows-style shortcuts
 
-Outside terminal applications, the default mappings are:
+Outside terminal applications:
 
-| Physical shortcut | macOS action |
-|---|---|
-| Ctrl+C | Cmd+C |
-| Ctrl+V | Cmd+V |
-| Ctrl+X | Cmd+X |
-| Ctrl+A | Cmd+A |
-| Ctrl+Z | Cmd+Z |
-| Ctrl+Shift+Z | Cmd+Shift+Z |
-| Ctrl+F | Cmd+F |
-| Ctrl+S | Cmd+S |
-| Ctrl+P | Cmd+P |
-| Ctrl+T | Cmd+T |
-| Ctrl+W | Cmd+W |
-| Ctrl+Shift+T | Cmd+Shift+T |
-| Alt+Tab | Cmd+Tab |
+| Physical shortcut | macOS action | Status |
+|---|---|---|
+| Ctrl+C | Cmd+C | Implemented |
+| Ctrl+V | Cmd+V | Implemented |
+| Ctrl+X | Cmd+X | Implemented |
+| Ctrl+A | Cmd+A | Implemented |
+| Ctrl+Z | Cmd+Z | Implemented |
+| Ctrl+Shift+Z | Cmd+Shift+Z | Implemented |
+| Ctrl+F | Cmd+F | Implemented |
+| Ctrl+S | Cmd+S | Implemented |
+| Ctrl+P | Cmd+P | Implemented |
+| Ctrl+T | Cmd+T | Implemented |
+| Ctrl+W | Cmd+W | Implemented |
+| Ctrl+Shift+T | Cmd+Shift+T | Implemented |
+| Ctrl+L | Cmd+L, except Finder | Implemented |
+| Alt+Tab | Cmd+Tab | Implemented |
 
 ## Terminal applications
 
-Unix Control shortcuts must remain untouched in terminal applications. At minimum:
+Unix Control shortcuts remain untouched in Apple Terminal, iTerm2 and Ghostty.
 
-- Ctrl+C
-- Ctrl+D
-- Ctrl+A
-- Ctrl+Z
-- Ctrl+W
-
-The initial terminal allowlist includes Apple Terminal, iTerm2 and Ghostty, and must remain configurable.
+IDE-integrated terminals require a separate focus-aware rule and remain planned.
 
 ## Finder
 
-| Shortcut | Behaviour |
-|---|---|
-| Enter | Open selected file or folder |
-| F2 | Rename selected item |
-| Alt+Left | Navigate backward in Finder history |
-| Alt+Right | Navigate forward in Finder history |
-| Alt+Up | Navigate to parent folder |
-| Alt+Down | Open selected child folder |
-| Ctrl+L | Open WindowsMac Finder address bar |
-| Win+E | Show/open Finder |
+| Shortcut | Behaviour | Status |
+|---|---|---|
+| Enter | Open selected file/folder | Implemented |
+| F2 | Rename selected item | Implemented |
+| Alt+Left | Navigate backward | Implemented; ANSI mapping currently |
+| Alt+Right | Navigate forward | Implemented; ANSI mapping currently |
+| Alt+Up | Parent folder | Implemented |
+| Alt+Down | Enter selected folder only | Implemented |
+| Ctrl+L | Windows-style editable address bar | Planned |
+| Win+E | Focus/open Finder | Implemented |
+
+`Enter` must remain a normal Return key while a Finder text element has focus, including filename rename and search fields.
 
 ### Finder address bar
 
-Ctrl+L displays an editable text field containing the POSIX path of the active Finder window.
+Planned behaviour:
 
-Expected behaviour:
+- `Ctrl+L` opens an editable field containing the active Finder window's POSIX path.
+- `Ctrl+A`, `Ctrl+C`, `Ctrl+V` behave as under Windows.
+- `Enter` navigates to the entered path.
+- `Escape` closes the field.
 
-- Ctrl+A selects the complete path.
-- Ctrl+C copies it.
-- Ctrl+V pastes a replacement path.
-- Enter navigates the active Finder window to that path.
-- Escape dismisses the field.
-- The field must receive focus immediately.
+Until the panel exists, WindowsMac does **not** intercept `Ctrl+L` in Finder.
 
 ## Window management
 
-The Windows key is treated as the window-management modifier.
+The physical Windows key is the macOS Command key on a standard PC keyboard.
 
-| Shortcut | Target state |
-|---|---|
-| Win+Left | Left half |
-| Win+Right | Right half |
-| Win+Up | Top half, or maximize if already top half |
-| Win+Down | Bottom half |
+| Shortcut | Target state | Status |
+|---|---|---|
+| Win+Left | Left half | Implemented |
+| Win+Right | Right half | Implemented |
+| Win+Up | Top half, then maximize | Implemented |
+| Win+Down | Bottom half | Implemented |
+| Win+E | Finder | Implemented |
+| Win+L | Lock session | Implemented |
 
-Successive directional commands resolve from the actual current window geometry, not only from the last command.
+Successive commands are derived from the window's actual geometry, with a tolerance for borders and rounding.
 
 Examples:
 
-- Left half + Win+Up -> top-left quarter.
-- Left half + Win+Down -> bottom-left quarter.
-- Right half + Win+Up -> top-right quarter.
-- Right half + Win+Down -> bottom-right quarter.
-- Top half + Win+Up -> maximized visible frame.
+- left half + Win+Up → top-left quarter
+- left half + Win+Down → bottom-left quarter
+- right half + Win+Up → top-right quarter
+- right half + Win+Down → bottom-right quarter
+- top half + Win+Up → maximized visible frame
 
-Maximized means filling the screen's usable visible frame; it must not enter macOS native fullscreen / a separate Space.
+Maximized means `NSScreen.visibleFrame`; it never requests macOS native fullscreen.
 
-## Window states
+A normal window is not a `WindowSnapState`. Its pre-snap frame is retained separately by the window manager for future restore behaviour.
 
-The helper recognises these logical states:
+## Coordinate systems
 
-- normal
-- maximized
-- leftHalf
-- rightHalf
-- topHalf
-- bottomHalf
-- topLeft
-- topRight
-- bottomLeft
-- bottomRight
-
-State recognition must tolerate small coordinate differences caused by window borders and macOS layout rounding.
+AppKit and Accessibility use different vertical origins. WindowsMac converts explicitly between them before reading or applying window frames. Screen selection is based on the largest intersection with the current window, so negative and non-zero display origins are supported.
 
 ## Safety
 
-WindowsMac must be instantly disableable. A future emergency shortcut is reserved as Ctrl+Alt+Win+F12.
+All Karabiner mappings depend on:
 
-If the helper is unavailable, normal keyboard remaps must continue working and advanced actions should fail safely without blocking input.
+```text
+windowsmac_enabled = 1
+```
+
+The menu-bar toggle changes that variable through `karabiner_cli`.
+
+Emergency disable:
+
+```text
+Ctrl + Alt + Win + F12
+```
+
+sets the variable to `0` directly in Karabiner, without depending on the Swift helper.
+
+If the helper crashes, the variable is left unchanged, so stateless keyboard remaps continue to function. Advanced `send_user_command` actions fail without blocking ordinary input.
