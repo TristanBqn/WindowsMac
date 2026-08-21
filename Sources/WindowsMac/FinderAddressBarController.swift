@@ -102,6 +102,7 @@ final class FinderAddressBarController: NSObject, NSTextFieldDelegate, NSWindowD
         effectView.addSubview(field)
         effectView.addSubview(errorLabel)
         panel.contentView = effectView
+        panel.addressField = field
 
         self.panel = panel
         self.textField = field
@@ -200,28 +201,29 @@ final class FinderAddressBarController: NSObject, NSTextFieldDelegate, NSWindowD
 }
 
 private final class AddressBarPanel: NSPanel {
+    weak var addressField: NSTextField?
+
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { false }
 
-    /// WindowsMac's own address bar understands physical Control shortcuts directly.
-    /// This makes Ctrl+A/C/V/X reliable even during the brief frontmost-app transition
-    /// when the panel opens and Karabiner may still consider Finder to be frontmost.
+    /// Handle Windows-style editing shortcuts inside WindowsMac itself.
+    /// Karabiner may deliver either the original Control chord or an already-remapped
+    /// Command chord, so the panel accepts both and routes directly to the field editor.
     override func sendEvent(_ event: NSEvent) {
-        if handleWindowsControlShortcut(event) {
+        if handleWindowsEditingShortcut(event) {
             return
         }
 
         super.sendEvent(event)
     }
 
-    private func handleWindowsControlShortcut(_ event: NSEvent) -> Bool {
+    private func handleWindowsEditingShortcut(_ event: NSEvent) -> Bool {
         guard event.type == .keyDown else { return false }
 
         let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
         guard
-            flags.contains(.control),
-            !flags.contains(.command),
-            let editor = firstResponder as? NSTextView,
+            flags.contains(.control) || flags.contains(.command),
+            let editor = addressField?.currentEditor() as? NSTextView,
             let key = event.charactersIgnoringModifiers?.lowercased()
         else {
             return false
